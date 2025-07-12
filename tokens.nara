@@ -1,0 +1,80 @@
+Keywords:
+    val
+    mut
+    type
+    enum
+    proto
+    impl
+    try
+    catch
+    fn
+    return
+    while
+    for
+    in
+    loop
+    match
+    use
+    unsafe
+    if
+    else if
+    else
+
+Identifiers:
+    identifier -> [a-zA-Z][a-zA-Z0-9_]*
+    type_identifier -> [A-Z][a-zA-Z0-9_]*     # Type names start with uppercase
+    enum_identifier -> [A-Z][a-zA-Z0-9_]*     # Enum names start with uppercase
+    proto_identifier -> [A-Z][a-zA-Z0-9_]*    # Protocol names start with uppercase
+    impl_identifier -> [A-Z][a-zA-Z0-9_]*     # Implementation names start with uppercase
+    fn_identifier -> [a-z_][a-zA-Z0-9_]*      # Function names can start with lowercase or underscore
+    return_identifier -> return
+    while_identifier -> while
+    for_identifier -> for
+    loop_identifier -> loop
+    match_identifier -> match
+    use_identifier -> use
+    unsafe_identifier -> unsafe
+
+Literals:
+    string_literal -> "hello"
+    char_literal -> 'a'
+    number_literal -> 42
+    boolean_literal -> true
+    res_literal -> ok(42) | err("error")
+    opt_literal -> some(42) | nil
+
+Operators:
+    assignment_operator -> =
+    arithmetic_operator -> + - * /
+    comparison_operator -> == != < > <= >=
+    logical_operator -> && || !
+
+Lifetime Annotations:
+    mutable -> ~
+    immutable -> &
+    owned(default) -> _
+
+types:
+    integer_type -> i64 | i32 | i16 | i8
+    float_type -> f64
+    boolean_type -> bool
+    string_type -> String
+    char_type -> char
+
+Standart Libraries:
+    std_io -> print | println | read | write
+    std_fs -> open | close | read_file | write_file
+    std_net -> connect | listen | send | receive
+    std_time -> now | sleep
+
+Built-in Types:
+    built_in_type -> int | float | str | char | bool | list | map | tuple
+
+Higher-order Functions:
+    higher_order_fn -> map | filter | reduce | find | fold
+
+Higher-rank Functions:
+    higher_rank_fn -> 'a, list('a)
+
+Comments:
+    single_line_comment -> # This is a comment
