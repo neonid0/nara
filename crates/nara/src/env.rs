@@ -1,10 +1,24 @@
+use crate::interner::StringInterner;
 use crate::val::Val;
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::rc::Rc;
 
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug)]
 pub struct Env<'parent> {
     bindings: HashMap<String, Val>,
     parent: Option<&'parent Self>,
+    interner: RefCell<StringInterner>,
+}
+
+impl<'parent> Default for Env<'parent> {
+    fn default() -> Self {
+        Self {
+            bindings: HashMap::new(),
+            parent: None,
+            interner: RefCell::new(StringInterner::new()),
+        }
+    }
 }
 
 impl<'parent> Env<'parent> {
@@ -28,6 +42,18 @@ impl<'parent> Env<'parent> {
         Self {
             bindings: HashMap::new(),
             parent: Some(self),
+            interner: RefCell::new(StringInterner::new()),
         }
+    }
+
+    fn get_root_interner(&self) -> &RefCell<StringInterner> {
+        match self.parent {
+            None => &self.interner,
+            Some(parent) => parent.get_root_interner(),
+        }
+    }
+
+    pub(crate) fn intern(&self, s: &str) -> Rc<str> {
+        self.get_root_interner().borrow_mut().intern(s)
     }
 }
