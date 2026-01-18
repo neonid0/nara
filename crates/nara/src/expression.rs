@@ -143,23 +143,23 @@ impl ForLoop {
         let (s, _) = utils::extract_whitespace(s);
         let s = utils::tag("for", s)?;
         let (s, _) = utils::extract_whitespace_restrict(s)?;
-        
+
         // Parse variable name
         let (s, var) = utils::extract_ident(s)?;
         let (s, _) = utils::extract_whitespace(s);
-        
+
         // Parse 'in' keyword
         let s = utils::tag("in", s)?;
         let (s, _) = utils::extract_whitespace_restrict(s)?;
-        
+
         // Parse iterable
         let (s, iterable) = Expression::new_operand(s)?;
         let (s, _) = utils::extract_whitespace(s);
-        
+
         // Parse body (must be a block)
         let (s, body_block) = Block::new(s)?;
         let body = Box::new(Expression::Block(body_block));
-        
+
         Ok((
             s,
             Self {
@@ -179,36 +179,39 @@ pub(crate) struct ListLiteral {
 impl ListLiteral {
     pub(crate) fn new(s: &str) -> Result<(&str, Self), String> {
         let (s, _) = utils::extract_whitespace(s);
-        
+
         if !s.starts_with('[') {
             return Err("expected '[' for list literal".to_string());
         }
-        
+
         let s = &s[1..];
         let mut elements = Vec::new();
         let mut remaining = s;
-        
+
         loop {
             let (rest, _) = utils::extract_whitespace(remaining);
-            
+
             // Check for closing bracket
             if rest.starts_with(']') {
                 return Ok((&rest[1..], Self { elements }));
             }
-            
+
             // Parse element
             let (rest, element) = Expression::new(rest)?;
             elements.push(element);
-            
+
             let (rest, _) = utils::extract_whitespace(rest);
-            
+
             // Check for comma or closing bracket
             if rest.starts_with(',') {
                 remaining = &rest[1..];
             } else if rest.starts_with(']') {
                 return Ok((&rest[1..], Self { elements }));
             } else {
-                return Err(format!("expected ',' or ']' in list literal, got '{}'", rest.chars().take(10).collect::<String>()));
+                return Err(format!(
+                    "expected ',' or ']' in list literal, got '{}'",
+                    rest.chars().take(10).collect::<String>()
+                ));
             }
         }
     }
@@ -483,15 +486,18 @@ impl Expression {
                                 Val::Bool(b) => b.to_string(),
                                 Val::Function(_) => String::from("<function>"),
                                 Val::List(items) => {
-                                    let strs: Vec<String> = items.iter().map(|v| match v {
-                                        Val::Number(n) => n.to_string(),
-                                        Val::Float(f) => f.to_string(),
-                                        Val::String(s) => format!("\"{}\"", s),
-                                        Val::Bool(b) => b.to_string(),
-                                        Val::Function(_) => String::from("<function>"),
-                                        Val::List(_) => String::from("[...]"),
-                                        Val::Unit => String::from("()"),
-                                    }).collect();
+                                    let strs: Vec<String> = items
+                                        .iter()
+                                        .map(|v| match v {
+                                            Val::Number(n) => n.to_string(),
+                                            Val::Float(f) => f.to_string(),
+                                            Val::String(s) => format!("\"{}\"", s),
+                                            Val::Bool(b) => b.to_string(),
+                                            Val::Function(_) => String::from("<function>"),
+                                            Val::List(_) => String::from("[...]"),
+                                            Val::Unit => String::from("()"),
+                                        })
+                                        .collect();
                                     format!("[{}]", strs.join(", "))
                                 }
                                 Val::Unit => String::from("()"),
@@ -647,15 +653,18 @@ impl Expression {
                             Val::Bool(b) => b.to_string(),
                             Val::Function(_) => String::from("<function>"),
                             Val::List(items) => {
-                                let strs: Vec<String> = items.iter().map(|v| match v {
-                                    Val::Number(n) => n.to_string(),
-                                    Val::Float(f) => f.to_string(),
-                                    Val::String(s) => s.to_string(),
-                                    Val::Bool(b) => b.to_string(),
-                                    Val::Function(_) => String::from("<function>"),
-                                    Val::List(_) => String::from("[...]"),
-                                    Val::Unit => String::from("()"),
-                                }).collect();
+                                let strs: Vec<String> = items
+                                    .iter()
+                                    .map(|v| match v {
+                                        Val::Number(n) => n.to_string(),
+                                        Val::Float(f) => f.to_string(),
+                                        Val::String(s) => s.to_string(),
+                                        Val::Bool(b) => b.to_string(),
+                                        Val::Function(_) => String::from("<function>"),
+                                        Val::List(_) => String::from("[...]"),
+                                        Val::Unit => String::from("()"),
+                                    })
+                                    .collect();
                                 format!("[{}]", strs.join(", "))
                             }
                             Val::Unit => String::from("()"),
@@ -664,7 +673,7 @@ impl Expression {
                     }
                     return Ok(Val::Unit);
                 }
-                
+
                 if call.name == "len" {
                     if call.args.len() != 1 {
                         return Err(format!("len() expects 1 argument, got {}", call.args.len()));
@@ -677,12 +686,15 @@ impl Expression {
                     };
                     return Ok(Val::Number(length));
                 }
-                
+
                 if call.name == "range" {
                     if call.args.len() != 1 && call.args.len() != 2 {
-                        return Err(format!("range() expects 1 or 2 arguments, got {}", call.args.len()));
+                        return Err(format!(
+                            "range() expects 1 or 2 arguments, got {}",
+                            call.args.len()
+                        ));
                     }
-                    
+
                     let start = if call.args.len() == 1 {
                         0
                     } else {
@@ -691,16 +703,16 @@ impl Expression {
                             _ => return Err("range() arguments must be numbers".to_string()),
                         }
                     };
-                    
+
                     let end = match call.args[if call.args.len() == 1 { 0 } else { 1 }].eval(env)? {
                         Val::Number(n) => n,
                         _ => return Err("range() arguments must be numbers".to_string()),
                     };
-                    
+
                     let items: Vec<Val> = (start..end).map(Val::Number).collect();
                     return Ok(Val::List(items));
                 }
-                
+
                 // Get the function from environment
                 let func_val = env.get_binding_value_restrict(&call.name)?;
 
@@ -1089,5 +1101,816 @@ mod tests {
             .eval(&Env::default()),
             Ok(Val::String(Rc::from("Number: 42")))
         )
+    }
+
+    // ========== Boolean Tests ==========
+    
+    #[test]
+    fn parse_true_literal() {
+        assert_eq!(
+            Expression::new("true"),
+            Ok(("", Expression::Bool(BoolLiteral(true))))
+        )
+    }
+
+    #[test]
+    fn parse_false_literal() {
+        assert_eq!(
+            Expression::new("false"),
+            Ok(("", Expression::Bool(BoolLiteral(false))))
+        )
+    }
+
+    #[test]
+    fn eval_true() {
+        assert_eq!(
+            Expression::Bool(BoolLiteral(true)).eval(&Env::default()),
+            Ok(Val::Bool(true))
+        )
+    }
+
+    #[test]
+    fn eval_false() {
+        assert_eq!(
+            Expression::Bool(BoolLiteral(false)).eval(&Env::default()),
+            Ok(Val::Bool(false))
+        )
+    }
+
+    #[test]
+    fn test_truthiness_bool() {
+        assert_eq!(Val::Bool(true).is_truthy(), true);
+        assert_eq!(Val::Bool(false).is_truthy(), false);
+    }
+
+    #[test]
+    fn test_truthiness_numbers() {
+        assert_eq!(Val::Number(0).is_truthy(), false);
+        assert_eq!(Val::Number(1).is_truthy(), true);
+        assert_eq!(Val::Number(-1).is_truthy(), true);
+    }
+
+    #[test]
+    fn test_truthiness_strings() {
+        assert_eq!(Val::String(Rc::from("")).is_truthy(), false);
+        assert_eq!(Val::String(Rc::from("hello")).is_truthy(), true);
+    }
+
+    #[test]
+    fn test_truthiness_lists() {
+        assert_eq!(Val::List(vec![]).is_truthy(), false);
+        assert_eq!(Val::List(vec![Val::Number(1)]).is_truthy(), true);
+    }
+
+    // ========== Comparison Operator Tests ==========
+
+    #[test]
+    fn parse_eq_operator() {
+        assert_eq!(Op::new("=="), Ok(("", Op::Eq)));
+    }
+
+    #[test]
+    fn parse_neq_operator() {
+        assert_eq!(Op::new("!="), Ok(("", Op::NotEq)));
+    }
+
+    #[test]
+    fn parse_lt_operator() {
+        assert_eq!(Op::new("<"), Ok(("", Op::Lt)));
+    }
+
+    #[test]
+    fn parse_gt_operator() {
+        assert_eq!(Op::new(">"), Ok(("", Op::Gt)));
+    }
+
+    #[test]
+    fn parse_lte_operator() {
+        assert_eq!(Op::new("<="), Ok(("", Op::LtEq)));
+    }
+
+    #[test]
+    fn parse_gte_operator() {
+        assert_eq!(Op::new(">="), Ok(("", Op::GtEq)));
+    }
+
+    #[test]
+    fn eval_number_equality() {
+        assert_eq!(
+            Expression::Operation {
+                lhs: Box::new(Expression::Number(Number(5))),
+                rhs: Box::new(Expression::Number(Number(5))),
+                op: Op::Eq,
+            }
+            .eval(&Env::default()),
+            Ok(Val::Bool(true))
+        )
+    }
+
+    #[test]
+    fn eval_number_inequality() {
+        assert_eq!(
+            Expression::Operation {
+                lhs: Box::new(Expression::Number(Number(5))),
+                rhs: Box::new(Expression::Number(Number(3))),
+                op: Op::NotEq,
+            }
+            .eval(&Env::default()),
+            Ok(Val::Bool(true))
+        )
+    }
+
+    #[test]
+    fn eval_number_less_than() {
+        assert_eq!(
+            Expression::Operation {
+                lhs: Box::new(Expression::Number(Number(3))),
+                rhs: Box::new(Expression::Number(Number(5))),
+                op: Op::Lt,
+            }
+            .eval(&Env::default()),
+            Ok(Val::Bool(true))
+        )
+    }
+
+    #[test]
+    fn eval_number_greater_than() {
+        assert_eq!(
+            Expression::Operation {
+                lhs: Box::new(Expression::Number(Number(10))),
+                rhs: Box::new(Expression::Number(Number(5))),
+                op: Op::Gt,
+            }
+            .eval(&Env::default()),
+            Ok(Val::Bool(true))
+        )
+    }
+
+    #[test]
+    fn eval_number_lte() {
+        assert_eq!(
+            Expression::Operation {
+                lhs: Box::new(Expression::Number(Number(5))),
+                rhs: Box::new(Expression::Number(Number(5))),
+                op: Op::LtEq,
+            }
+            .eval(&Env::default()),
+            Ok(Val::Bool(true))
+        )
+    }
+
+    #[test]
+    fn eval_number_gte() {
+        assert_eq!(
+            Expression::Operation {
+                lhs: Box::new(Expression::Number(Number(10))),
+                rhs: Box::new(Expression::Number(Number(5))),
+                op: Op::GtEq,
+            }
+            .eval(&Env::default()),
+            Ok(Val::Bool(true))
+        )
+    }
+
+    #[test]
+    fn eval_string_equality() {
+        assert_eq!(
+            Expression::Operation {
+                lhs: Box::new(Expression::String(StringLiteral("hello".to_string()))),
+                rhs: Box::new(Expression::String(StringLiteral("hello".to_string()))),
+                op: Op::Eq,
+            }
+            .eval(&Env::default()),
+            Ok(Val::Bool(true))
+        )
+    }
+
+    #[test]
+    fn eval_bool_equality() {
+        assert_eq!(
+            Expression::Operation {
+                lhs: Box::new(Expression::Bool(BoolLiteral(true))),
+                rhs: Box::new(Expression::Bool(BoolLiteral(true))),
+                op: Op::Eq,
+            }
+            .eval(&Env::default()),
+            Ok(Val::Bool(true))
+        )
+    }
+
+    // ========== Logical Operator Tests ==========
+
+    #[test]
+    fn parse_and_operator() {
+        assert_eq!(Op::new("&&"), Ok(("", Op::And)));
+    }
+
+    #[test]
+    fn parse_or_operator() {
+        assert_eq!(Op::new("||"), Ok(("", Op::Or)));
+    }
+
+    #[test]
+    fn eval_and_true_true() {
+        assert_eq!(
+            Expression::Operation {
+                lhs: Box::new(Expression::Bool(BoolLiteral(true))),
+                rhs: Box::new(Expression::Bool(BoolLiteral(true))),
+                op: Op::And,
+            }
+            .eval(&Env::default()),
+            Ok(Val::Bool(true))
+        )
+    }
+
+    #[test]
+    fn eval_and_true_false() {
+        assert_eq!(
+            Expression::Operation {
+                lhs: Box::new(Expression::Bool(BoolLiteral(true))),
+                rhs: Box::new(Expression::Bool(BoolLiteral(false))),
+                op: Op::And,
+            }
+            .eval(&Env::default()),
+            Ok(Val::Bool(false))
+        )
+    }
+
+    #[test]
+    fn eval_or_false_true() {
+        assert_eq!(
+            Expression::Operation {
+                lhs: Box::new(Expression::Bool(BoolLiteral(false))),
+                rhs: Box::new(Expression::Bool(BoolLiteral(true))),
+                op: Op::Or,
+            }
+            .eval(&Env::default()),
+            Ok(Val::Bool(true))
+        )
+    }
+
+    #[test]
+    fn eval_or_false_false() {
+        assert_eq!(
+            Expression::Operation {
+                lhs: Box::new(Expression::Bool(BoolLiteral(false))),
+                rhs: Box::new(Expression::Bool(BoolLiteral(false))),
+                op: Op::Or,
+            }
+            .eval(&Env::default()),
+            Ok(Val::Bool(false))
+        )
+    }
+
+    // ========== Unary Operator Tests ==========
+
+    #[test]
+    fn parse_not_operator() {
+        assert_eq!(
+            Expression::new("!true"),
+            Ok((
+                "",
+                Expression::UnaryOp {
+                    operand: Box::new(Expression::Bool(BoolLiteral(true))),
+                    op: UnaryOp::Not,
+                }
+            ))
+        )
+    }
+
+    #[test]
+    fn eval_not_true() {
+        assert_eq!(
+            Expression::UnaryOp {
+                operand: Box::new(Expression::Bool(BoolLiteral(true))),
+                op: UnaryOp::Not,
+            }
+            .eval(&Env::default()),
+            Ok(Val::Bool(false))
+        )
+    }
+
+    #[test]
+    fn eval_not_false() {
+        assert_eq!(
+            Expression::UnaryOp {
+                operand: Box::new(Expression::Bool(BoolLiteral(false))),
+                op: UnaryOp::Not,
+            }
+            .eval(&Env::default()),
+            Ok(Val::Bool(true))
+        )
+    }
+
+    #[test]
+    fn eval_negate_number() {
+        assert_eq!(
+            Expression::UnaryOp {
+                operand: Box::new(Expression::Number(Number(42))),
+                op: UnaryOp::Neg,
+            }
+            .eval(&Env::default()),
+            Ok(Val::Number(-42))
+        )
+    }
+
+    #[test]
+    fn eval_negate_float() {
+        assert_eq!(
+            Expression::UnaryOp {
+                operand: Box::new(Expression::Float(Float(3.14))),
+                op: UnaryOp::Neg,
+            }
+            .eval(&Env::default()),
+            Ok(Val::Float(-3.14))
+        )
+    }
+
+    // ========== If/Else Tests ==========
+
+    #[test]
+    fn parse_if_expression() {
+        assert_eq!(
+            Expression::new("if true { 42 }"),
+            Ok((
+                "",
+                Expression::If(IfExpr {
+                    condition: Box::new(Expression::Bool(BoolLiteral(true))),
+                    then_branch: Box::new(Expression::Block(Block {
+                        statements: vec![Statement::Expression(Expression::Number(Number(42)))]
+                    })),
+                    else_branch: None,
+                })
+            ))
+        )
+    }
+
+    #[test]
+    fn parse_if_else_expression() {
+        let result = Expression::new("if false { 1 } else { 2 }");
+        assert!(result.is_ok());
+        let (remaining, expr) = result.unwrap();
+        assert_eq!(remaining, "");
+        match expr {
+            Expression::If(if_expr) => {
+                assert!(if_expr.else_branch.is_some());
+            }
+            _ => panic!("Expected If expression"),
+        }
+    }
+
+    #[test]
+    fn eval_if_true() {
+        assert_eq!(
+            Expression::If(IfExpr {
+                condition: Box::new(Expression::Bool(BoolLiteral(true))),
+                then_branch: Box::new(Expression::Block(Block {
+                    statements: vec![Statement::Expression(Expression::Number(Number(42)))]
+                })),
+                else_branch: None,
+            })
+            .eval(&Env::default()),
+            Ok(Val::Number(42))
+        )
+    }
+
+    #[test]
+    fn eval_if_false_no_else() {
+        assert_eq!(
+            Expression::If(IfExpr {
+                condition: Box::new(Expression::Bool(BoolLiteral(false))),
+                then_branch: Box::new(Expression::Block(Block {
+                    statements: vec![Statement::Expression(Expression::Number(Number(42)))]
+                })),
+                else_branch: None,
+            })
+            .eval(&Env::default()),
+            Ok(Val::Unit)
+        )
+    }
+
+    #[test]
+    fn eval_if_else_true() {
+        assert_eq!(
+            Expression::If(IfExpr {
+                condition: Box::new(Expression::Bool(BoolLiteral(true))),
+                then_branch: Box::new(Expression::Block(Block {
+                    statements: vec![Statement::Expression(Expression::Number(Number(1)))]
+                })),
+                else_branch: Some(Box::new(Expression::Block(Block {
+                    statements: vec![Statement::Expression(Expression::Number(Number(2)))]
+                }))),
+            })
+            .eval(&Env::default()),
+            Ok(Val::Number(1))
+        )
+    }
+
+    #[test]
+    fn eval_if_else_false() {
+        assert_eq!(
+            Expression::If(IfExpr {
+                condition: Box::new(Expression::Bool(BoolLiteral(false))),
+                then_branch: Box::new(Expression::Block(Block {
+                    statements: vec![Statement::Expression(Expression::Number(Number(1)))]
+                })),
+                else_branch: Some(Box::new(Expression::Block(Block {
+                    statements: vec![Statement::Expression(Expression::Number(Number(2)))]
+                }))),
+            })
+            .eval(&Env::default()),
+            Ok(Val::Number(2))
+        )
+    }
+
+    // ========== While Loop Tests ==========
+
+    #[test]
+    fn parse_while_loop() {
+        let result = Expression::new("while false { 1 }");
+        assert!(result.is_ok());
+        let (remaining, expr) = result.unwrap();
+        assert_eq!(remaining, "");
+        match expr {
+            Expression::While(_) => {}
+            _ => panic!("Expected While expression"),
+        }
+    }
+
+    #[test]
+    fn eval_while_false() {
+        assert_eq!(
+            Expression::While(WhileLoop {
+                condition: Box::new(Expression::Bool(BoolLiteral(false))),
+                body: Box::new(Expression::Block(Block {
+                    statements: vec![Statement::Expression(Expression::Number(Number(1)))]
+                })),
+            })
+            .eval(&Env::default()),
+            Ok(Val::Unit)
+        )
+    }
+
+    // ========== For Loop Tests ==========
+
+    #[test]
+    fn parse_for_loop() {
+        let result = Expression::new("for i in [1, 2, 3] { i }");
+        assert!(result.is_ok());
+        let (remaining, expr) = result.unwrap();
+        assert_eq!(remaining, "");
+        match expr {
+            Expression::For(_) => {}
+            _ => panic!("Expected For expression"),
+        }
+    }
+
+    #[test]
+    fn eval_for_loop_empty_list() {
+        assert_eq!(
+            Expression::For(ForLoop {
+                var: "i".to_string(),
+                iterable: Box::new(Expression::List(ListLiteral { elements: vec![] })),
+                body: Box::new(Expression::Block(Block {
+                    statements: vec![Statement::Expression(Expression::Number(Number(1)))]
+                })),
+            })
+            .eval(&Env::default()),
+            Ok(Val::Unit)
+        )
+    }
+
+    #[test]
+    fn eval_for_loop_with_items() {
+        let result = Expression::For(ForLoop {
+            var: "x".to_string(),
+            iterable: Box::new(Expression::List(ListLiteral {
+                elements: vec![
+                    Expression::Number(Number(1)),
+                    Expression::Number(Number(2)),
+                ]
+            })),
+            body: Box::new(Expression::Block(Block {
+                statements: vec![Statement::Expression(Expression::BindingUsage(
+                    BindingUsage {
+                        name: "x".to_string()
+                    }
+                ))]
+            })),
+        })
+        .eval(&Env::default());
+        
+        // Last iteration returns 2
+        assert_eq!(result, Ok(Val::Number(2)));
+    }
+
+    // ========== List Tests ==========
+
+    #[test]
+    fn parse_empty_list() {
+        assert_eq!(
+            Expression::new("[]"),
+            Ok(("", Expression::List(ListLiteral { elements: vec![] })))
+        )
+    }
+
+    #[test]
+    fn parse_list_with_numbers() {
+        assert_eq!(
+            Expression::new("[1, 2, 3]"),
+            Ok((
+                "",
+                Expression::List(ListLiteral {
+                    elements: vec![
+                        Expression::Number(Number(1)),
+                        Expression::Number(Number(2)),
+                        Expression::Number(Number(3)),
+                    ]
+                })
+            ))
+        )
+    }
+
+    #[test]
+    fn parse_list_with_spaces() {
+        assert_eq!(
+            Expression::new("[ 1 , 2 , 3 ]"),
+            Ok((
+                "",
+                Expression::List(ListLiteral {
+                    elements: vec![
+                        Expression::Number(Number(1)),
+                        Expression::Number(Number(2)),
+                        Expression::Number(Number(3)),
+                    ]
+                })
+            ))
+        )
+    }
+
+    #[test]
+    fn eval_empty_list() {
+        assert_eq!(
+            Expression::List(ListLiteral { elements: vec![] }).eval(&Env::default()),
+            Ok(Val::List(vec![]))
+        )
+    }
+
+    #[test]
+    fn eval_list_with_numbers() {
+        assert_eq!(
+            Expression::List(ListLiteral {
+                elements: vec![
+                    Expression::Number(Number(1)),
+                    Expression::Number(Number(2)),
+                    Expression::Number(Number(3)),
+                ]
+            })
+            .eval(&Env::default()),
+            Ok(Val::List(vec![
+                Val::Number(1),
+                Val::Number(2),
+                Val::Number(3)
+            ]))
+        )
+    }
+
+    #[test]
+    fn eval_list_with_mixed_types() {
+        assert_eq!(
+            Expression::List(ListLiteral {
+                elements: vec![
+                    Expression::Number(Number(42)),
+                    Expression::String(StringLiteral("hello".to_string())),
+                    Expression::Bool(BoolLiteral(true)),
+                ]
+            })
+            .eval(&Env::default()),
+            Ok(Val::List(vec![
+                Val::Number(42),
+                Val::String(Rc::from("hello")),
+                Val::Bool(true)
+            ]))
+        )
+    }
+
+    // ========== Function Tests ==========
+
+    #[test]
+    fn parse_function_call_no_args() {
+        let result = Expression::new("foo()");
+        assert!(result.is_ok());
+        let (remaining, expr) = result.unwrap();
+        assert_eq!(remaining, "");
+        match expr {
+            Expression::FunctionCall(call) => {
+                assert_eq!(call.name, "foo");
+                assert_eq!(call.args.len(), 0);
+            }
+            _ => panic!("Expected FunctionCall"),
+        }
+    }
+
+    #[test]
+    fn parse_function_call_with_args() {
+        let result = Expression::new("add(1, 2)");
+        assert!(result.is_ok());
+        let (remaining, expr) = result.unwrap();
+        assert_eq!(remaining, "");
+        match expr {
+            Expression::FunctionCall(call) => {
+                assert_eq!(call.name, "add");
+                assert_eq!(call.args.len(), 2);
+            }
+            _ => panic!("Expected FunctionCall"),
+        }
+    }
+
+    #[test]
+    fn eval_function_call_builtin_print() {
+        let result = Expression::FunctionCall(FunctionCall {
+            name: "print".to_string(),
+            args: vec![Expression::Number(Number(42))],
+        })
+        .eval(&Env::default());
+        
+        assert_eq!(result, Ok(Val::Unit));
+    }
+
+    #[test]
+    fn eval_function_call_builtin_len_string() {
+        assert_eq!(
+            Expression::FunctionCall(FunctionCall {
+                name: "len".to_string(),
+                args: vec![Expression::String(StringLiteral("hello".to_string()))],
+            })
+            .eval(&Env::default()),
+            Ok(Val::Number(5))
+        )
+    }
+
+    #[test]
+    fn eval_function_call_builtin_len_list() {
+        assert_eq!(
+            Expression::FunctionCall(FunctionCall {
+                name: "len".to_string(),
+                args: vec![Expression::List(ListLiteral {
+                    elements: vec![
+                        Expression::Number(Number(1)),
+                        Expression::Number(Number(2)),
+                        Expression::Number(Number(3)),
+                    ]
+                })],
+            })
+            .eval(&Env::default()),
+            Ok(Val::Number(3))
+        )
+    }
+
+    #[test]
+    fn eval_function_call_builtin_range_one_arg() {
+        assert_eq!(
+            Expression::FunctionCall(FunctionCall {
+                name: "range".to_string(),
+                args: vec![Expression::Number(Number(5))],
+            })
+            .eval(&Env::default()),
+            Ok(Val::List(vec![
+                Val::Number(0),
+                Val::Number(1),
+                Val::Number(2),
+                Val::Number(3),
+                Val::Number(4),
+            ]))
+        )
+    }
+
+    #[test]
+    fn eval_function_call_builtin_range_two_args() {
+        assert_eq!(
+            Expression::FunctionCall(FunctionCall {
+                name: "range".to_string(),
+                args: vec![Expression::Number(Number(2)), Expression::Number(Number(5))],
+            })
+            .eval(&Env::default()),
+            Ok(Val::List(vec![
+                Val::Number(2),
+                Val::Number(3),
+                Val::Number(4),
+            ]))
+        )
+    }
+
+    #[test]
+    fn eval_user_defined_function() {
+        use crate::function_def::FunctionDef;
+        
+        let mut env = Env::default();
+        
+        // Define: fn double(x) { x + x }
+        let func_def = FunctionDef {
+            name: "double".to_string(),
+            params: vec!["x".to_string()],
+            body: Box::new(Statement::Expression(Expression::Operation {
+                lhs: Box::new(Expression::BindingUsage(BindingUsage {
+                    name: "x".to_string(),
+                })),
+                rhs: Box::new(Expression::BindingUsage(BindingUsage {
+                    name: "x".to_string(),
+                })),
+                op: Op::Add,
+            })),
+        };
+        
+        // Store function
+        let func_val = Val::Function(crate::val::Function {
+            params: func_def.params.clone(),
+            body: Rc::new(*func_def.body.clone()),
+        });
+        env.store_binding("double".to_string(), func_val);
+        
+        // Call: double(21)
+        let result = Expression::FunctionCall(FunctionCall {
+            name: "double".to_string(),
+            args: vec![Expression::Number(Number(21))],
+        })
+        .eval(&env);
+        
+        assert_eq!(result, Ok(Val::Number(42)));
+    }
+
+    #[test]
+    fn test_function_parameter_binding() {
+        use crate::function_def::FunctionDef;
+        
+        let mut env = Env::default();
+        
+        // Define: fn add(a, b) { a + b }
+        let func_def = FunctionDef {
+            name: "add".to_string(),
+            params: vec!["a".to_string(), "b".to_string()],
+            body: Box::new(Statement::Expression(Expression::Operation {
+                lhs: Box::new(Expression::BindingUsage(BindingUsage {
+                    name: "a".to_string(),
+                })),
+                rhs: Box::new(Expression::BindingUsage(BindingUsage {
+                    name: "b".to_string(),
+                })),
+                op: Op::Add,
+            })),
+        };
+        
+        let func_val = Val::Function(crate::val::Function {
+            params: func_def.params.clone(),
+            body: Rc::new(*func_def.body.clone()),
+        });
+        env.store_binding("add".to_string(), func_val);
+        
+        // Call: add(10, 32)
+        let result = Expression::FunctionCall(FunctionCall {
+            name: "add".to_string(),
+            args: vec![Expression::Number(Number(10)), Expression::Number(Number(32))],
+        })
+        .eval(&env);
+        
+        assert_eq!(result, Ok(Val::Number(42)));
+    }
+
+    // ========== Child Environment Tests ==========
+
+    #[test]
+    fn test_child_environment_scoping() {
+        let mut parent = Env::default();
+        parent.store_binding("x".to_string(), Val::Number(10));
+        
+        let mut child = parent.create_child();
+        child.store_binding("y".to_string(), Val::Number(20));
+        
+        // Child can access parent's binding
+        assert_eq!(
+            child.get_binding_value_restrict("x"),
+            Ok(Val::Number(10))
+        );
+        
+        // Child has its own binding
+        assert_eq!(
+            child.get_binding_value_restrict("y"),
+            Ok(Val::Number(20))
+        );
+    }
+
+    #[test]
+    fn test_child_environment_shadowing() {
+        let mut parent = Env::default();
+        parent.store_binding("x".to_string(), Val::Number(10));
+        
+        let mut child = parent.create_child();
+        child.store_binding("x".to_string(), Val::Number(20));
+        
+        // Child shadows parent's binding
+        assert_eq!(
+            child.get_binding_value_restrict("x"),
+            Ok(Val::Number(20))
+        );
     }
 }
