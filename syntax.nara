@@ -154,8 +154,8 @@ type Worker {
   @NoJob
   @Other(String)
 
-  name: str 
-  age: int 
+  name: str
+  age: int
 }
 
 # constructing a worker:
@@ -185,9 +185,11 @@ type Penguin {
   @Adele
 
   swim = self -> print("sploosh")
-  fn swim_with_speed(speed: int) {
-    print("sploosh at speed " + speed.to_string())
+
+  fn swim_with_speed(speed: int): str {
+    print(f"sploosh at speed {speed}")
   }
+
   is_friendly: bool = true
 }
 
@@ -210,7 +212,7 @@ val scary_creature = Creature {
 }
 
 # btw, all anonymous type instantiations (when there's only one variant) are prefixed with `$` as well, so you can have something like:
-val x = ${ foo = 4, bar = 8, can = "Hello" } # infered as { foo: Int bar: Int, can: str }
+val x = ${ foo = 4, bar = 8, can = "Hello" } # infered as { foo: Int, bar: Int, can: str }
 val y = $(34, 4) # infered as (Int, Int)
 
 # fields can have default values as well:
@@ -238,7 +240,7 @@ type Foo {
     baz: int
   }
 }
-val bar = Foo.Bar { 
+val bar = Foo.Bar {
     baz = 8
 }
 
@@ -257,7 +259,7 @@ type List('a) {
     tail: *list('a) # * is a pointer type, similar to C/C++
   })
 }
-proto Iterator('a) { 
+proto Iterator('a) {
   type Item
 
   next: fn (~'a) -> Item
