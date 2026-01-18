@@ -13,7 +13,12 @@ fn main() -> io::Result<()> {
         write!(stdout, "-> ")?;
         stdout.flush()?;
 
-        stdin.read_line(&mut input)?;
+        let bytes_read = stdin.read_line(&mut input)?;
+
+        // Break on EOF (when read_line returns 0 bytes)
+        if bytes_read == 0 {
+            break Ok(());
+        }
 
         match run(input.trim(), &mut env) {
             Ok(Some(val)) => {
