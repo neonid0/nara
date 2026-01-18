@@ -4,7 +4,7 @@ use crate::expression::Expression;
 use crate::function_def::FunctionDef;
 use crate::val::Val;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub(crate) enum Statement {
     BindingDef(BindingDef),
     FunctionDef(FunctionDef),
@@ -30,11 +30,15 @@ impl Statement {
                 Ok(Val::Unit)
             }
             Self::Expression(expression) => expression.eval(env),
-            _ => todo!("Function definitions are not yet supported in eval"),
-            // Self::FunctionDef(function_def) => {
-            //     env.store_function(function_def.name.clone(), function_def.clone());
-            //     Ok(Val::Unit)
-            // }
+            Self::FunctionDef(function_def) => {
+                use std::rc::Rc;
+                let func_val = Val::Function(crate::val::Function {
+                    params: function_def.params.clone(),
+                    body: Rc::new(*function_def.body.clone()),
+                });
+                env.store_binding(function_def.name.clone(), func_val);
+                Ok(Val::Unit)
+            }
         }
     }
 }
@@ -80,8 +84,8 @@ mod tests {
             Ok((
                 "",
                 Statement::Expression(Expression::Operation {
-                    lhs: Number(10),
-                    rhs: Number(10),
+                    lhs: Box::new(Expression::Number(Number(10))),
+                    rhs: Box::new(Expression::Number(Number(10))),
                     op: Op::Add
                 })
             ))
@@ -118,8 +122,8 @@ mod tests {
                                 body: Box::new(Statement::Expression(Expression::Block(Block {
                                     statements: vec![Statement::Expression(
                                         Expression::Operation {
-                                            lhs: Number(3),
-                                            rhs: Number(2),
+                                            lhs: Box::new(Expression::Number(Number(3))),
+                                            rhs: Box::new(Expression::Number(Number(2))),
                                             op: Op::Add
                                         }
                                     )]
@@ -142,8 +146,7 @@ mod tests {
             Statement::new(
                 "fn semihkedy(param1, param2) {
                     val one = 1;
-                    return one
-                    it should return one regardless to statement order
+                    one
                 }"
             ),
             Ok((
@@ -177,8 +180,8 @@ mod tests {
                     name: "operation".to_string(),
                     params: vec!["par1".to_string(), "par2".to_string()],
                     body: Box::new(Statement::Expression(Expression::Operation {
-                        lhs: Number(4),
-                        rhs: Number(3),
+                        lhs: Box::new(Expression::Number(Number(4))),
+                        rhs: Box::new(Expression::Number(Number(3))),
                         op: Op::Add
                     },))
                 })

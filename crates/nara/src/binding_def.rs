@@ -4,7 +4,7 @@ use crate::{
     utils::{self, tag},
 };
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub(crate) struct BindingDef {
     pub(crate) name: String,
     pub(crate) val: Expression,
@@ -56,9 +56,9 @@ mod tests {
                 BindingDef {
                     name: "x".to_string(),
                     val: Expression::Operation {
-                        lhs: Number(10),
+                        lhs: Box::new(Expression::Number(Number(10))),
+                        rhs: Box::new(Expression::Number(Number(5))),
                         op: Op::Div,
-                        rhs: Number(5),
                     }
                 }
             ))

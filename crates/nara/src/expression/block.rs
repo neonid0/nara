@@ -1,6 +1,6 @@
 use crate::{env::Env, statement::Statement, utils, val::Val};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub(crate) struct Block {
     pub(crate) statements: Vec<Statement>,
 }
@@ -112,9 +112,9 @@ mod tests {
                 "",
                 Block {
                     statements: vec![Statement::Expression(Expression::Operation {
-                        lhs: Number(3),
+                        lhs: Box::new(Expression::Number(Number(3))),
+                        rhs: Box::new(Expression::Number(Number(5))),
                         op: Op::Add,
-                        rhs: Number(5),
                     })]
                 }
             ))
@@ -126,9 +126,9 @@ mod tests {
         assert_eq!(
             Block {
                 statements: vec![Statement::Expression(Expression::Operation {
-                    lhs: Number(3),
+                    lhs: Box::new(Expression::Number(Number(3))),
+                    rhs: Box::new(Expression::Number(Number(5))),
                     op: Op::Mul,
-                    rhs: Number(5),
                 })]
             }
             .eval(&Env::default()),
@@ -186,8 +186,8 @@ mod tests {
                     Statement::Expression(Expression::Number(Number(100))),
                     Statement::Expression(Expression::Number(Number(30))),
                     Statement::Expression(Expression::Operation {
-                        lhs: Number(10),
-                        rhs: Number(7),
+                        lhs: Box::new(Expression::Number(Number(10))),
+                        rhs: Box::new(Expression::Number(Number(7))),
                         op: Op::Sub,
                     }),
                 ],

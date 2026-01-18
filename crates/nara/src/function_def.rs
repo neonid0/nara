@@ -1,6 +1,6 @@
-use crate::{expression::Expression, statement::Statement, utils};
+use crate::{statement::Statement, utils};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub(crate) struct FunctionDef {
     pub(crate) name: String,
     pub(crate) params: Vec<String>,
@@ -32,7 +32,7 @@ impl FunctionDef {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::expression::Block;
+    use crate::expression::{Block, Expression};
 
     #[test]
     fn parse_function_def_with_no_params_and_empty_body() {

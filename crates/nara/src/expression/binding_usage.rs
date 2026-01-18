@@ -2,7 +2,7 @@ use crate::env::Env;
 use crate::utils;
 use crate::val::Val;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub(crate) struct BindingUsage {
     pub(crate) name: String,
 }
