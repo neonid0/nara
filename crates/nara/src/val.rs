@@ -2,8 +2,8 @@ use std::rc::Rc;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function {
-    pub params: Vec<String>,
-    pub body: Rc<crate::statement::Statement>,
+    pub(crate) params: Vec<String>,
+    pub(crate) body: Rc<crate::statement::Statement>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

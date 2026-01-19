@@ -192,8 +192,8 @@ impl ListLiteral {
             let (rest, _) = utils::extract_whitespace(remaining);
 
             // Check for closing bracket
-            if rest.starts_with(']') {
-                return Ok((&rest[1..], Self { elements }));
+            if let Some(stripped) = rest.strip_prefix(']') {
+                return Ok((stripped, Self { elements }));
             }
 
             // Parse element
@@ -203,10 +203,10 @@ impl ListLiteral {
             let (rest, _) = utils::extract_whitespace(rest);
 
             // Check for comma or closing bracket
-            if rest.starts_with(',') {
-                remaining = &rest[1..];
-            } else if rest.starts_with(']') {
-                return Ok((&rest[1..], Self { elements }));
+            if let Some(stripped) = rest.strip_prefix(',') {
+                remaining = stripped;
+            } else if let Some(stripped) = rest.strip_prefix(']') {
+                return Ok((stripped, Self { elements }));
             } else {
                 return Err(format!(
                     "expected ',' or ']' in list literal, got '{}'",
@@ -310,8 +310,8 @@ impl FunctionCall {
                 args.push(arg);
 
                 let (rest, _) = utils::extract_whitespace(rest);
-                if rest.starts_with(',') {
-                    remaining = &rest[1..];
+                if let Some(stripped) = rest.strip_prefix(',') {
+                    remaining = stripped;
                     let (rest, _) = utils::extract_whitespace(remaining);
                     remaining = rest;
                 } else if rest.is_empty() {
@@ -634,7 +634,7 @@ impl Expression {
                         for item in items {
                             let mut loop_env = env.create_child();
                             loop_env.store_binding(for_loop.var.clone(), item);
-                            result = for_loop.body.eval(&mut loop_env)?;
+                            result = for_loop.body.eval(&loop_env)?;
                         }
                         Ok(result)
                     }
@@ -1104,7 +1104,7 @@ mod tests {
     }
 
     // ========== Boolean Tests ==========
-    
+
     #[test]
     fn parse_true_literal() {
         assert_eq!(
@@ -1139,27 +1139,27 @@ mod tests {
 
     #[test]
     fn test_truthiness_bool() {
-        assert_eq!(Val::Bool(true).is_truthy(), true);
-        assert_eq!(Val::Bool(false).is_truthy(), false);
+        assert!(Val::Bool(true).is_truthy());
+        assert!(!Val::Bool(false).is_truthy());
     }
 
     #[test]
     fn test_truthiness_numbers() {
-        assert_eq!(Val::Number(0).is_truthy(), false);
-        assert_eq!(Val::Number(1).is_truthy(), true);
-        assert_eq!(Val::Number(-1).is_truthy(), true);
+        assert!(!Val::Number(0).is_truthy());
+        assert!(Val::Number(1).is_truthy());
+        assert!(Val::Number(-1).is_truthy());
     }
 
     #[test]
     fn test_truthiness_strings() {
-        assert_eq!(Val::String(Rc::from("")).is_truthy(), false);
-        assert_eq!(Val::String(Rc::from("hello")).is_truthy(), true);
+        assert!(!Val::String(Rc::from("")).is_truthy());
+        assert!(Val::String(Rc::from("hello")).is_truthy());
     }
 
     #[test]
     fn test_truthiness_lists() {
-        assert_eq!(Val::List(vec![]).is_truthy(), false);
-        assert_eq!(Val::List(vec![Val::Number(1)]).is_truthy(), true);
+        assert!(!Val::List(vec![]).is_truthy());
+        assert!(Val::List(vec![Val::Number(1)]).is_truthy());
     }
 
     // ========== Comparison Operator Tests ==========
@@ -1418,11 +1418,11 @@ mod tests {
     fn eval_negate_float() {
         assert_eq!(
             Expression::UnaryOp {
-                operand: Box::new(Expression::Float(Float(3.14))),
+                operand: Box::new(Expression::Float(Float(2.5))),
                 op: UnaryOp::Neg,
             }
             .eval(&Env::default()),
-            Ok(Val::Float(-3.14))
+            Ok(Val::Float(-2.5))
         )
     }
 
@@ -1585,21 +1585,18 @@ mod tests {
         let result = Expression::For(ForLoop {
             var: "x".to_string(),
             iterable: Box::new(Expression::List(ListLiteral {
-                elements: vec![
-                    Expression::Number(Number(1)),
-                    Expression::Number(Number(2)),
-                ]
+                elements: vec![Expression::Number(Number(1)), Expression::Number(Number(2))],
             })),
             body: Box::new(Expression::Block(Block {
                 statements: vec![Statement::Expression(Expression::BindingUsage(
                     BindingUsage {
-                        name: "x".to_string()
-                    }
-                ))]
+                        name: "x".to_string(),
+                    },
+                ))],
             })),
         })
         .eval(&Env::default());
-        
+
         // Last iteration returns 2
         assert_eq!(result, Ok(Val::Number(2)));
     }
@@ -1733,7 +1730,7 @@ mod tests {
             args: vec![Expression::Number(Number(42))],
         })
         .eval(&Env::default());
-        
+
         assert_eq!(result, Ok(Val::Unit));
     }
 
@@ -1804,9 +1801,9 @@ mod tests {
     #[test]
     fn eval_user_defined_function() {
         use crate::function_def::FunctionDef;
-        
+
         let mut env = Env::default();
-        
+
         // Define: fn double(x) { x + x }
         let func_def = FunctionDef {
             name: "double".to_string(),
@@ -1821,30 +1818,30 @@ mod tests {
                 op: Op::Add,
             })),
         };
-        
+
         // Store function
         let func_val = Val::Function(crate::val::Function {
             params: func_def.params.clone(),
             body: Rc::new(*func_def.body.clone()),
         });
         env.store_binding("double".to_string(), func_val);
-        
+
         // Call: double(21)
         let result = Expression::FunctionCall(FunctionCall {
             name: "double".to_string(),
             args: vec![Expression::Number(Number(21))],
         })
         .eval(&env);
-        
+
         assert_eq!(result, Ok(Val::Number(42)));
     }
 
     #[test]
     fn test_function_parameter_binding() {
         use crate::function_def::FunctionDef;
-        
+
         let mut env = Env::default();
-        
+
         // Define: fn add(a, b) { a + b }
         let func_def = FunctionDef {
             name: "add".to_string(),
@@ -1859,20 +1856,23 @@ mod tests {
                 op: Op::Add,
             })),
         };
-        
+
         let func_val = Val::Function(crate::val::Function {
             params: func_def.params.clone(),
             body: Rc::new(*func_def.body.clone()),
         });
         env.store_binding("add".to_string(), func_val);
-        
+
         // Call: add(10, 32)
         let result = Expression::FunctionCall(FunctionCall {
             name: "add".to_string(),
-            args: vec![Expression::Number(Number(10)), Expression::Number(Number(32))],
+            args: vec![
+                Expression::Number(Number(10)),
+                Expression::Number(Number(32)),
+            ],
         })
         .eval(&env);
-        
+
         assert_eq!(result, Ok(Val::Number(42)));
     }
 
@@ -1882,35 +1882,26 @@ mod tests {
     fn test_child_environment_scoping() {
         let mut parent = Env::default();
         parent.store_binding("x".to_string(), Val::Number(10));
-        
+
         let mut child = parent.create_child();
         child.store_binding("y".to_string(), Val::Number(20));
-        
+
         // Child can access parent's binding
-        assert_eq!(
-            child.get_binding_value_restrict("x"),
-            Ok(Val::Number(10))
-        );
-        
+        assert_eq!(child.get_binding_value_restrict("x"), Ok(Val::Number(10)));
+
         // Child has its own binding
-        assert_eq!(
-            child.get_binding_value_restrict("y"),
-            Ok(Val::Number(20))
-        );
+        assert_eq!(child.get_binding_value_restrict("y"), Ok(Val::Number(20)));
     }
 
     #[test]
     fn test_child_environment_shadowing() {
         let mut parent = Env::default();
         parent.store_binding("x".to_string(), Val::Number(10));
-        
+
         let mut child = parent.create_child();
         child.store_binding("x".to_string(), Val::Number(20));
-        
+
         // Child shadows parent's binding
-        assert_eq!(
-            child.get_binding_value_restrict("x"),
-            Ok(Val::Number(20))
-        );
+        assert_eq!(child.get_binding_value_restrict("x"), Ok(Val::Number(20)));
     }
 }
