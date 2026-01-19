@@ -55,35 +55,34 @@ nara-cli --help
 
 ### Example Code
 
+**REPL Mode:**
 ```nara
-// Variables
-val name = "Nara"
-val version = 0.2
-
-// Functions
-fn greet(name) {
-  f"Hello, {name}!"
-}
-
-// Lists and iteration
-val numbers = range(10)
-for num in numbers {
-  print(f"Number: {num}")
-}
-
-// Control flow
-fn factorial(n) {
-  if n <= 1 {
-    1
-  } else {
-    n * factorial(n - 1)
-  }
-}
-
-// String interpolation
-val message = f"Factorial of 5 is {factorial(5)}"
-print(message)
+-> val name = "Nara"
+-> val greeting = f"Hello, {name}!"
+-> print(greeting)
+Hello, Nara!
 ```
+
+**File Mode (current limitations):**
+```nara
+// Simple scripts work (keep on one line with semicolons):
+val x = 10; val y = 20; print(x + y)
+
+// Functions work:
+fn double(x) { x + x }; val result = double(21); print(result)
+
+// Loops work:
+val nums = range(5); for n in nums { print(n) }
+```
+
+**⚠️ Known Limitations:**
+- Complex expressions like `n * factorial(n - 1)` don't parse correctly (see [MISSING_FEATURES.md](MISSING_FEATURES.md))
+- Multi-line files need proper formatting (best to use single line with semicolons)
+- Comments (`//`) conflict with floor division operator
+- No parenthesized expressions yet: `(a + b) * c` doesn't work
+
+See [MISSING_FEATURES.md](MISSING_FEATURES.md) for complete list of limitations and workarounds.
+
 
 ## Development
 
@@ -127,33 +126,49 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 ## Documentation
 
 - [CHANGELOG.md](CHANGELOG.md) - Version history
-- [TEST_COVERAGE.md](TEST_COVERAGE.md) - Test coverage details
+- [TEST_COVERAGE.md](TEST_COVERAGE.md) - Test coverage details  
 - [CONTRIBUTING.md](CONTRIBUTING.md) - Contribution guidelines
+- **[MISSING_FEATURES.md](MISSING_FEATURES.md) - Known limitations and planned features**
+- [WORKFLOW_SETUP.md](WORKFLOW_SETUP.md) - CI/CD and development workflow
 - [docs/](docs/) - Language documentation
 
 ## Roadmap
 
-### v0.3.0 (Planned)
-- [ ] Tuples and destructuring
+### v0.3.0 (Next Release) - Parser & Core Improvements
+- [ ] **Fix operator precedence** (Critical - breaks recursive functions)
+- [ ] **Parenthesized expressions** `(a + b) * c`
+- [ ] **Proper comment handling** (fix conflict with `//` operator)
+- [ ] Multi-line file support
+- [ ] Return, break, continue statements
+- [ ] Tuples `(a, b, c)`
+- [ ] Method call syntax `obj.method()`
+- [ ] Better error messages with line numbers
+
+### v0.4.0 (Planned) - Type System
+- [ ] Custom types (struct, enum)
 - [ ] Pattern matching
-- [ ] Methods and member access
+- [ ] Type annotations (optional)
+- [ ] Traits/Interfaces
 - [ ] Module system
 - [ ] Error handling (Result/Option types)
-
-### v0.4.0 (Planned)
-- [ ] Custom types (struct, enum)
-- [ ] Traits/Interfaces
-- [ ] Generics
 - [ ] Standard library expansion
 
-### v1.0.0 (Long-term)
-- [ ] Memory management system
+### v0.5.0 (Planned) - Performance
+- [ ] Generics
+- [ ] AST optimization passes
+- [ ] JIT compilation (experimental)
+- [ ] Memory pooling
+
+### v1.0.0 (Long-term) - Production Ready
+- [ ] Self-hosting compiler
 - [ ] Concurrency primitives
 - [ ] FFI (Foreign Function Interface)
-- [ ] Self-hosting compiler
+- [ ] Complete debugger
+- [ ] LSP support
 - [ ] Operating system development toolkit
 
-See [TODO](#todo) section for more details.
+**See [MISSING_FEATURES.md](MISSING_FEATURES.md) for detailed breakdown of limitations and workarounds.**
+
 
 ## Contributing
 

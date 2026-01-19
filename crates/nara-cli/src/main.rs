@@ -1,6 +1,6 @@
-use std::io::{self, Write};
-use std::fs;
 use std::env;
+use std::fs;
+use std::io::{self, Write};
 
 // cli for nara-lang
 fn main() -> io::Result<()> {
@@ -10,7 +10,7 @@ fn main() -> io::Result<()> {
     if args.len() > 1 {
         // File execution mode
         let filename = &args[1];
-        
+
         match execute_file(filename) {
             Ok(_) => Ok(()),
             Err(e) => {
@@ -31,7 +31,7 @@ fn execute_file(filename: &str) -> Result<(), String> {
 
     // Trim the contents to remove trailing whitespace
     let contents = contents.trim();
-    
+
     // Skip if file is empty or only contains comments/whitespace
     if contents.is_empty() {
         return Ok(());
@@ -41,8 +41,8 @@ fn execute_file(filename: &str) -> Result<(), String> {
     let mut env = nara::Env::default();
 
     // Parse and execute
-    let parse = nara::parse(contents)
-        .map_err(|msg| format!("Parse error in '{}': {}", filename, msg))?;
+    let parse =
+        nara::parse(contents).map_err(|msg| format!("Parse error in '{}': {}", filename, msg))?;
 
     parse
         .eval(&mut env)

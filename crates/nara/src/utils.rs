@@ -31,35 +31,7 @@ fn take_while_restrict(
 }
 
 pub(crate) fn extract_whitespace(s: &str) -> (&str, &str) {
-    skip_whitespace_and_comments(s)
-}
-
-// Skip whitespace and line comments
-fn skip_whitespace_and_comments(s: &str) -> (&str, &str) {
-    let mut remaining = s;
-    let original = s;
-    
-    loop {
-        // Skip whitespace
-        let (after_ws, _) = take_while(|c| c.is_whitespace(), remaining);
-        
-        // Check for line comment
-        if after_ws.starts_with("//") {
-            // Skip until end of line (including the newline)
-            let after_slash = &after_ws[2..]; // Skip "//"
-            let (after_comment, _) = take_while(|c| c != '\n', after_slash);
-            // Skip the newline if present
-            remaining = if after_comment.starts_with('\n') {
-                &after_comment[1..]
-            } else {
-                after_comment
-            };
-        } else {
-            // No more comments, return
-            let consumed = &original[..original.len() - after_ws.len()];
-            return (after_ws, consumed);
-        }
-    }
+    take_while(|c| c.is_whitespace(), s)
 }
 
 pub(crate) fn extract_whitespace_restrict(s: &str) -> Result<(&str, &str), String> {
