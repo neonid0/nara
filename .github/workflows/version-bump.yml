@@ -1,0 +1,105 @@
+name: Version Bump
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  bump-version:
+    name: Bump Version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: dev
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-edit
+        run: cargo install cargo-edit
+
+      - name: Get current version
+        id: current_version
+        run: |
+          VERSION=$(grep '^version' crates/nara/Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Bump version
+        run: |
+          cd crates/nara && cargo set-version --bump ${{ inputs.version_type }}
+          cd ../nara-cli && cargo set-version --bump ${{ inputs.version_type }}
+
+      - name: Get new version
+        id: new_version
+        run: |
+          VERSION=$(grep '^version' crates/nara/Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update Cargo.lock
+        run: cargo build
+
+      - name: Update CHANGELOG.md
+        run: |
+          DATE=$(date +%Y-%m-%d)
+          NEW_VERSION="${{ steps.new_version.outputs.version }}"
+          
+          # Create new version entry
+          sed -i "s/## \[Unreleased\]/## [Unreleased]\n\n## [$NEW_VERSION] - $DATE/" CHANGELOG.md
+
+      - name: Commit changes
+        run: |
+          git add .
+          git commit -m "chore: bump version to ${{ steps.new_version.outputs.version }}"
+
+      - name: Push changes
+        run: git push origin dev
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: release/v${{ steps.new_version.outputs.version }}
+          base: main
+          title: "Release v${{ steps.new_version.outputs.version }}"
+          body: |
+            ## Release v${{ steps.new_version.outputs.version }}
+            
+            This PR bumps the version from ${{ steps.current_version.outputs.version }} to ${{ steps.new_version.outputs.version }}.
+            
+            ### Changes
+            - Bumped version in Cargo.toml files
+            - Updated CHANGELOG.md with release date
+            - Updated Cargo.lock
+            
+            ### Checklist
+            - [ ] All CI checks pass
+            - [ ] CHANGELOG.md is up to date
+            - [ ] Documentation is updated
+            - [ ] Tests are passing
+            
+            After merging, tag the release with:
+            ```bash
+            git tag -a v${{ steps.new_version.outputs.version }} -m "Release v${{ steps.new_version.outputs.version }}"
+            git push origin v${{ steps.new_version.outputs.version }}
+            ```
+          labels: release

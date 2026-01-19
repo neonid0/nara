@@ -1,0 +1,52 @@
+name: Dependency Update
+
+on:
+  schedule:
+    # Run weekly on Monday at 00:00 UTC
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-dependencies:
+    name: Update Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Update dependencies
+        run: cargo update
+
+      - name: Run tests
+        run: cargo test --all-features --workspace
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: dependency-update
+          base: dev
+          title: "chore(deps): update dependencies"
+          body: |
+            ## Dependency Update
+            
+            Automated weekly dependency update.
+            
+            ### Changes
+            - Updated Cargo.lock with latest compatible versions
+            
+            ### Verification
+            - All tests pass with updated dependencies
+            
+            Please review the changes and merge if everything looks good.
+          labels: dependencies
+          commit-message: "chore(deps): update dependencies"
