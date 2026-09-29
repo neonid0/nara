@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Operator precedence and left associativity for all binary operators, so chained expressions
+  like `1 + 2 * 3` and `a < b && c` parse
+- Parentheses for grouping, for example `(2 + 3) * 4` and `!(a == b)`
+- `#` line comments; the REPL ignores empty and comment-only lines
+- Floor division `//` for floats
+- 12 tests for the new parsing behaviour (154 in total)
+- MIT license
+
+### Fixed
+- `if` and `while` conditions and `for` iterables accept any expression, not only a literal or
+  variable (`if x > 5 { … }`, `for i in range(3) { … }`)
+- Nested parentheses in function call arguments (`add(add(1, 2), 3)`)
+- `&&` and `||` short-circuit instead of always evaluating both sides
+- `//` rounds down for negative operands (`-7 // 2` is `-4`, was `-3`)
+- Identifiers starting with `true` or `false` (such as `trueish`) are no longer split into a
+  boolean and a leftover name
+
+### Changed
+- README rewritten with a quick start, a language tour of implemented features, known
+  limitations, project layout, development commands and roadmap
+- `docs/documentation.md` marked as a design specification that is not yet implemented
+- `TEST_COVERAGE.md` counts corrected and last verified run recorded
+- Added `CONTRIBUTING.md`, a pull request template and issue templates for bug reports and
+  language proposals
+
 ## [0.2.0] - 2026-01-19
 
 ### Added

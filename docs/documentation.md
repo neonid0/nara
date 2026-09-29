@@ -1,6 +1,11 @@
 # The Nara Programming Language
 
-**Version:** 0.1.0 (Experimental)
+**Version:** 0.1.0 (Experimental design draft)
+
+> **Design specification.** This document describes where Nara is heading. None of the
+> features below (linear types, actors, capabilities, `instruction`, `workflow`, `provider`,
+> `policy`, `deploy`, `telemetry`) are implemented in the current interpreter (v0.2.0). For what
+> runs today, see the [language tour in the README](../README.md#language-tour).
 
 **Philosophy:** Zero Cost, Zero Trust, Zero Races.
 

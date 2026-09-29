@@ -1,8 +1,8 @@
 # Nara Language - Test Coverage
 
 ## Summary
-- **Total Tests**: 142 (61 new tests added)
-- **All Tests Passing**: ✓
+- **Total Tests**: 154
+- **All Tests Passing**: ✓ (last verified 2026-09-29: `cargo test` → 154 passed, 0 failed)
 
 ## Test Breakdown by Feature
 
@@ -72,7 +72,7 @@
 - ✓ Evaluate list with numbers
 - ✓ Evaluate list with mixed types (number, string, bool)
 
-### Functions (8 tests)
+### Functions (9 tests)
 - ✓ Parse function call with no arguments `foo()`
 - ✓ Parse function call with arguments `add(1, 2)`
 - ✓ Evaluate built-in `print()` function
@@ -86,6 +86,20 @@
 ### Environment Scoping (2 tests)
 - ✓ Test child environment can access parent bindings
 - ✓ Test child environment variable shadowing
+
+### Expression Parsing (12 tests)
+- ✓ Operator precedence (`2 + 3 * 4` → `14`, comparisons below arithmetic, `&&` below comparisons)
+- ✓ Left associativity (`1 + 2 + 3`, `10 - 4 - 3`, `100 / 10 / 5`)
+- ✓ Parentheses and unary operators on groups (`(2 + 3) * 4`, `!(1 == 2)`, `-(2 + 3)`)
+- ✓ `if` / `else if` with operation conditions (`if x > 5 { … }`)
+- ✓ `while` with an operation condition
+- ✓ `for` over a function call (`for i in range(4) { … }`)
+- ✓ Nested function calls and expression arguments (`add(add(1, 2), 3 * 2)`)
+- ✓ Short-circuit `&&` / `||` (right side not evaluated)
+- ✓ Floor division rounds down for negative numbers and floats
+- ✓ `#` line comments
+- ✓ Expressions inside f-string interpolation
+- ✓ Identifiers that start with `true` / `false`
 
 ### Existing Features (Still Tested)
 - ✓ Number parsing and evaluation
@@ -101,9 +115,12 @@
 - ✓ String interning
 
 ## Test Categories
-- **Parse Tests**: 37 tests verifying correct parsing of syntax
-- **Eval Tests**: 47 tests verifying correct evaluation and execution
-- **Integration Tests**: 7 tests verifying complex interactions
+Counted from `cargo test -- --list` by test name prefix:
+
+- **Parse tests** (`parse_*`): 51 tests verifying correct parsing of syntax
+- **Eval tests** (`eval_*`): 57 tests verifying correct evaluation and execution
+- **Integration tests** (`test_*`): 26 tests covering expression parsing, scoping, interning and multi-statement input
+- **Parser utilities and error cases**: 20 tests for combinators, invalid input and type errors
 
 ## Running Tests
 
