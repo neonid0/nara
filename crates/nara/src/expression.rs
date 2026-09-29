@@ -26,9 +26,16 @@ impl BoolLiteral {
     fn new(s: &str) -> Result<(&str, Self), String> {
         let (s, _) = utils::extract_whitespace(s);
 
-        utils::tag("true", s)
+        let (s, lit) = utils::tag("true", s)
             .map(|s| (s, Self(true)))
-            .or_else(|_| utils::tag("false", s).map(|s| (s, Self(false))))
+            .or_else(|_| utils::tag("false", s).map(|s| (s, Self(false))))?;
+
+        // `trueish` is an identifier, not `true` followed by `ish`
+        if s.starts_with(|c: char| c.is_ascii_alphanumeric()) {
+            return Err("expected boolean literal".to_string());
+        }
+
+        Ok((s, lit))
     }
 }
 
@@ -104,6 +111,17 @@ impl Op {
                 )
             })
     }
+
+    fn precedence(&self) -> u8 {
+        match self {
+            Self::Or => 1,
+            Self::And => 2,
+            Self::Eq | Self::NotEq => 3,
+            Self::Lt | Self::LtEq | Self::Gt | Self::GtEq => 4,
+            Self::Add | Self::Sub => 5,
+            Self::Mul | Self::Div | Self::Floor => 6,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -153,7 +171,7 @@ impl ForLoop {
         let (s, _) = utils::extract_whitespace_restrict(s)?;
 
         // Parse iterable
-        let (s, iterable) = Expression::new_operand(s)?;
+        let (s, iterable) = Expression::new(s)?;
         let (s, _) = utils::extract_whitespace(s);
 
         // Parse body (must be a block)
@@ -249,7 +267,7 @@ impl IfExpr {
         let (s, _) = utils::extract_whitespace_restrict(s)?;
 
         // Parse condition (any expression that's not a block)
-        let (s, condition) = Expression::new_operand(s)?;
+        let (s, condition) = Expression::new(s)?;
         let (s, _) = utils::extract_whitespace(s);
 
         // Parse then branch (must be a block)
@@ -341,7 +359,7 @@ impl WhileLoop {
         let (s, _) = utils::extract_whitespace_restrict(s)?;
 
         // Parse condition
-        let (s, condition) = Expression::new_operand(s)?;
+        let (s, condition) = Expression::new(s)?;
         let (s, _) = utils::extract_whitespace(s);
 
         // Parse body (must be a block)
@@ -360,8 +378,45 @@ impl WhileLoop {
 
 impl Expression {
     pub(crate) fn new(s: &str) -> Result<(&str, Self), String> {
-        Self::new_operation(s)
-            .or_else(|_| Self::new_unary_op(s))
+        Self::new_binary(s, 0)
+    }
+
+    // Precedence climbing: binds operators tighter than `min_prec`, left-associative
+    fn new_binary(s: &str, min_prec: u8) -> Result<(&str, Self), String> {
+        let (mut s, mut lhs) = Self::new_primary(s)?;
+
+        loop {
+            let (after_ws, _) = utils::extract_whitespace(s);
+            let Ok((after_op, op)) = Op::new(after_ws) else {
+                break;
+            };
+
+            let prec = op.precedence();
+            if prec < min_prec {
+                break;
+            }
+
+            let (after_op, _) = utils::extract_whitespace(after_op);
+            let Ok((rest, rhs)) = Self::new_binary(after_op, prec + 1) else {
+                break;
+            };
+
+            lhs = Self::Operation {
+                lhs: Box::new(lhs),
+                rhs: Box::new(rhs),
+                op,
+            };
+            s = rest;
+        }
+
+        Ok((s, lhs))
+    }
+
+    fn new_primary(s: &str) -> Result<(&str, Self), String> {
+        let (s, _) = utils::extract_whitespace(s);
+
+        Self::new_unary_op(s)
+            .or_else(|_| Self::new_group(s))
             .or_else(|_| IfExpr::new(s).map(|(s, if_expr)| (s, Self::If(if_expr))))
             .or_else(|_| WhileLoop::new(s).map(|(s, while_loop)| (s, Self::While(while_loop))))
             .or_else(|_| ForLoop::new(s).map(|(s, for_loop)| (s, Self::For(for_loop))))
@@ -379,36 +434,13 @@ impl Expression {
             .or_else(|_| Block::new(s).map(|(s, block)| (s, Self::Block(block))))
     }
 
-    fn new_operation(s: &str) -> Result<(&str, Self), String> {
-        let (s, lhs) = Self::new_operand(s)?;
+    fn new_group(s: &str) -> Result<(&str, Self), String> {
+        let s = utils::tag("(", s)?;
+        let (s, expr) = Self::new(s)?;
         let (s, _) = utils::extract_whitespace(s);
+        let s = utils::tag(")", s)?;
 
-        let (s, op) = Op::new(s)?;
-        let (s, _) = utils::extract_whitespace(s);
-
-        let (s, rhs) = Self::new_operand(s)?;
-
-        Ok((
-            s,
-            Self::Operation {
-                lhs: Box::new(lhs),
-                rhs: Box::new(rhs),
-                op,
-            },
-        ))
-    }
-
-    fn new_operand(s: &str) -> Result<(&str, Self), String> {
-        Self::new_bool(s)
-            .or_else(|_| Self::new_float(s))
-            .or_else(|_| Self::new_number(s))
-            .or_else(|_| Self::new_string(s))
-            .or_else(|_| ListLiteral::new(s).map(|(s, list)| (s, Self::List(list))))
-            .or_else(|_| {
-                BindingUsage::new(s)
-                    .map(|(s, binding_usage)| (s, Self::BindingUsage(binding_usage)))
-            })
-            .or_else(|_| Block::new(s).map(|(s, block)| (s, Self::Block(block))))
+        Ok((s, expr))
     }
 
     fn new_number(s: &str) -> Result<(&str, Self), String> {
@@ -430,8 +462,7 @@ impl Expression {
             .map(|s| (s, UnaryOp::Not))
             .or_else(|_| utils::tag("-", s).map(|s| (s, UnaryOp::Neg)))?;
 
-        let (s, _) = utils::extract_whitespace(s);
-        let (s, operand) = Self::new_operand(s)?;
+        let (s, operand) = Self::new_primary(s)?;
 
         Ok((
             s,
@@ -519,6 +550,13 @@ impl Expression {
             }
             Self::Operation { lhs, rhs, op } => {
                 let lhs_val = lhs.eval(env)?;
+
+                match (&lhs_val, op) {
+                    (Val::Bool(false), Op::And) => return Ok(Val::Bool(false)),
+                    (Val::Bool(true), Op::Or) => return Ok(Val::Bool(true)),
+                    _ => {}
+                }
+
                 let rhs_val = rhs.eval(env)?;
 
                 match (lhs_val, rhs_val, op) {
@@ -537,7 +575,13 @@ impl Expression {
                         if r == 0 {
                             Err("Division by zero".to_string())
                         } else {
-                            Ok(Val::Number(l / r))
+                            let q = l / r;
+                            // Rust's `/` truncates toward zero; floor division rounds down
+                            if l % r != 0 && ((l < 0) != (r < 0)) {
+                                Ok(Val::Number(q - 1))
+                            } else {
+                                Ok(Val::Number(q))
+                            }
                         }
                     }
 
@@ -546,6 +590,7 @@ impl Expression {
                     (Val::Float(l), Val::Float(r), Op::Sub) => Ok(Val::Float(l - r)),
                     (Val::Float(l), Val::Float(r), Op::Mul) => Ok(Val::Float(l * r)),
                     (Val::Float(l), Val::Float(r), Op::Div) => Ok(Val::Float(l / r)),
+                    (Val::Float(l), Val::Float(r), Op::Floor) => Ok(Val::Float((l / r).floor())),
 
                     // String concatenation
                     (Val::String(l), Val::String(r), Op::Add) => {

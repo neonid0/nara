@@ -33,6 +33,10 @@ fn main() -> io::Result<()> {
 }
 
 fn run(input: &str, env: &mut nara::Env) -> Result<Option<nara::Val>, String> {
+    if input.is_empty() || input.starts_with('#') {
+        return Ok(None);
+    }
+
     let parse = nara::parse(input).map_err(|msg| format!("Parse error: {}", msg))?;
 
     let evaluated = parse

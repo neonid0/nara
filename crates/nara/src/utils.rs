@@ -30,8 +30,22 @@ fn take_while_restrict(
     }
 }
 
+// whitespace and `#` line comments
 pub(crate) fn extract_whitespace(s: &str) -> (&str, &str) {
-    take_while(|c| c.is_whitespace(), s)
+    let mut rest = s;
+
+    loop {
+        let (after_ws, _) = take_while(|c| c.is_whitespace(), rest);
+        rest = after_ws;
+
+        match rest.strip_prefix('#') {
+            Some(comment) => rest = take_while(|c| c != '\n', comment).0,
+            None => break,
+        }
+    }
+
+    let consumed = s.len() - rest.len();
+    (rest, &s[..consumed])
 }
 
 pub(crate) fn extract_whitespace_restrict(s: &str) -> Result<(&str, &str), String> {
@@ -42,19 +56,37 @@ pub(crate) fn extract_whitespace_restrict(s: &str) -> Result<(&str, &str), Strin
     )
 }
 
+// extracts up to the matching `)`, skipping nested parentheses and string literals
 pub(crate) fn extract_paranthesis(s: &str) -> Result<(&str, &str), String> {
-    s.chars()
-        .next()
-        .filter(|&c| c == '(')
-        .map(|_| {
-            let (remainder, extracted) = take_while(|c| c != ')', &s[1..]);
-            if let Some(after_paren) = remainder.strip_prefix(')') {
-                Ok((after_paren.trim_start(), extracted))
-            } else {
-                Err("expected closing parenthesis".to_string())
+    let inner = s
+        .strip_prefix('(')
+        .ok_or_else(|| "expected opening parenthesis".to_string())?;
+
+    let mut depth = 0usize;
+    let mut in_string = false;
+    let mut escaped = false;
+
+    for (idx, c) in inner.char_indices() {
+        if in_string {
+            match c {
+                _ if escaped => escaped = false,
+                '\\' => escaped = true,
+                '"' => in_string = false,
+                _ => {}
             }
-        })
-        .unwrap_or_else(|| Err("expected opening parenthesis".to_string()))
+            continue;
+        }
+
+        match c {
+            '"' => in_string = true,
+            '(' => depth += 1,
+            ')' if depth == 0 => return Ok((inner[idx + 1..].trim_start(), &inner[..idx])),
+            ')' => depth -= 1,
+            _ => {}
+        }
+    }
+
+    Err("expected closing parenthesis".to_string())
 }
 
 pub(crate) fn extract_semicolon(s: &str) -> (&str, &str) {
