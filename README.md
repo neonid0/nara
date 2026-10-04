@@ -166,7 +166,7 @@ tokens.nara                # planned keywords and tokens
 | Command              | What it does                                  |
 | -------------------- | --------------------------------------------- |
 | `make run`           | Start the REPL                                |
-| `make test`          | Run the test suite (154 tests)                |
+| `make test`          | Run the test suite                            |
 | `make clippy`        | Lint with `-D warnings`                       |
 | `make fmt`           | Format the code                               |
 | `make all`           | fmt, clippy, test and build                   |

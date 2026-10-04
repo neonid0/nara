@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Parentheses for grouping, for example `(2 + 3) * 4` and `!(a == b)`
 - `#` line comments; the REPL ignores empty and comment-only lines
 - Floor division `//` for floats
-- 12 tests for the new parsing behaviour (154 in total)
+- Tests for the new parsing behaviour
 - MIT license
 
 ### Fixed
